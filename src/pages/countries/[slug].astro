@@ -1,0 +1,84 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { countries } from "../../data/countries";
+import { storiesFor } from "../../data/stories";
+import { needLabel } from "../../lib/passport";
+import { countrySeo, flagUrl } from "../../lib/seo";
+import CalculatorCta from "../../components/CalculatorCta.astro";
+import PlaceDisplayAd from "../../components/PlaceDisplayAd.astro";
+
+export function getStaticPaths() {
+  return countries.map((country) => ({
+    params: { slug: country.slug },
+    props: { country },
+  }));
+}
+
+const { country } = Astro.props;
+const seo = countrySeo(country);
+const visa =
+  country.visa_free === true ? "무비자" : country.visa_free === "eta" ? "전자여행허가" : "비자 필요";
+const stories = storiesFor(country.slug);
+const queries = [
+  `${country.name} 여권 유효기간`,
+  `여권 유효기간 ${country.name}`,
+  `${country.name} 여행 여권 유효기간`,
+  country.passport_months >= 6
+    ? `여권 유효기간 6개월 ${country.name}`
+    : country.passport_months === 3
+      ? `${country.name} 여권 유효기간 3개월`
+      : `${country.name} 여권 유효기간 3개월 미만`,
+  country.passport_months >= 6 ? `${country.name} 여권 유효기간 6개월 미만` : `${country.name} 여권 만료 여행`,
+];
+---
+
+<Layout title={seo.title} description={seo.description} ogImage={seo.ogImage}>
+  <Header />
+  <main id="main" class="prose">
+    <div class="container">
+      <p class="hint"><a href="/countries/">국가 목록</a></p>
+      <img class="hero-flag" src={flagUrl(country.iso2, 160)} width="72" height="48" alt={`${country.name} 국기`} />
+      <h1>{country.name} 여행 여권 유효기간</h1>
+      <p>
+        {country.name} 여권 유효기간은 {needLabel(country)}입니다.
+        {country.passport_months >= 6
+          ? ` 6개월 미만이면 탑승이나 입국이 거절될 수 있습니다.`
+          : country.passport_months === 3
+            ? ` 3개월이 부족하면 출발 전에 갱신하는 편이 안전합니다.`
+            : ` 여행이 끝나기 전에 여권이 만료되면 안 됩니다.`}
+      </p>
+      <CalculatorCta country={country.name} slug={country.slug} />
+      <div class="card">
+        <p><strong>잔여기간 요건:</strong> {needLabel(country)}</p>
+        <p><strong>무비자/체류:</strong> {visa}{country.stay_days ? ` · 최장 ${country.stay_days}일` : ""}</p>
+        <p>
+          <strong>긴급여권:</strong>
+          {country.emergency_ok === true ? "인정" : country.emergency_ok === false ? "제한·거절될 수 있음" : "확인 필요"}
+        </p>
+        {country.emergency_note && <p class="note">{country.emergency_note}</p>}
+        <p>{country.notes}</p>
+      </div>
+
+      <section>
+        <h2>항공기 탑승 및 입국 금지 사례 모음</h2>
+        <div class="story-list">
+          {stories.map((item) => (
+            <a class="story-link" href={item.href} set:html={item.hookHtml} />
+          ))}
+        </div>
+        <p class="story-source">위 내용은 최근 뉴스 기사를 바탕으로 작성되었습니다</p>
+      </section>
+
+      <p class="related-queries">
+        같이 찾는 검색어: {queries.join(" · ")}
+      </p>
+      <p class="disclaimer">
+        근거: <a href={country.source_url} target="_blank" rel="noopener">{country.source_quote}</a>
+      </p>
+      <PlaceDisplayAd />
+    </div>
+  </main>
+  <Footer />
+</Layout>

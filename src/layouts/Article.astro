@@ -1,0 +1,75 @@
+---
+import Layout from "./Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import PlaceDisplayAd from "../components/PlaceDisplayAd.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  section?: "cases" | "guide";
+}
+
+const { title, description, ogImage, section } = Astro.props;
+const crumbs =
+  section === "cases"
+    ? [
+        { href: "/", label: "🏠 홈" },
+        { href: "/cases/", label: "입국 거부 사례" },
+      ]
+    : section === "guide"
+      ? [{ href: "/", label: "🏠 홈" }]
+      : [];
+
+const breadcrumbLd =
+  crumbs.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          ...crumbs.map((item, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: item.label.replace("🏠 ", ""),
+            item: new URL(item.href, Astro.site ?? "https://passport.marrien.co.kr").href,
+          })),
+          {
+            "@type": "ListItem",
+            position: crumbs.length + 1,
+            name: title,
+          },
+        ],
+      }
+    : null;
+---
+
+<Layout title={title} description={description} ogImage={ogImage}>
+  <Header />
+  <main id="main" class="prose">
+    <div class="container">
+      {
+        crumbs.length > 0 && (
+          <nav class="crumbs" aria-label="현재 위치">
+            {crumbs.map((item, index) => (
+              <>
+                {index > 0 && <span aria-hidden="true">›</span>}
+                <a href={item.href}>{item.label}</a>
+              </>
+            ))}
+            {section === "guide" && (
+              <>
+                <span aria-hidden="true">›</span>
+                <span>{title}</span>
+              </>
+            )}
+          </nav>
+        )
+      }
+      {breadcrumbLd && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />}
+      <slot />
+      <PlaceDisplayAd />
+    </div>
+  </main>
+  <Footer />
+</Layout>

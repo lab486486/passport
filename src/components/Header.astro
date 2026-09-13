@@ -1,0 +1,108 @@
+---
+import { site } from "../site.config";
+import { getSiteSettings, resolveNavHref, isExternalHref } from "../utils/site-settings";
+import BrandMark from "./BrandMark.astro";
+
+const settings = getSiteSettings();
+const links = settings.nav.map((item) => {
+  const href = resolveNavHref(item);
+  return { href, label: item.label, external: isExternalHref(href) };
+});
+
+const downloads = [
+  {
+    label: "셀프 증명사진 앱",
+    href: "https://play.google.com/store/apps/details?id=com.zzixx.idphoto&pcampaignid=web_share",
+  },
+  {
+    label: "일본 현지맛집 찾기",
+    href: "https://play.google.com/store/apps/details?id=com.kakaku.tabelog.tourists&pcampaignid=web_share",
+  },
+  {
+    label: "해킹방지 여권케이스",
+    href: "https://link.coupang.com/a/gexvCvniOi",
+    sponsored: true,
+  },
+];
+---
+
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="/" aria-label={settings.title || site.title}>
+      <BrandMark size={34} />
+      <span class="brand-name">{settings.title || site.name}</span>
+    </a>
+    <nav class="nav-links" aria-label="주요 메뉴">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+    <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="site-menu">
+      <span class="menu-toggle-bar"></span>
+      <span class="menu-toggle-bar"></span>
+      <span class="menu-toggle-bar"></span>
+      <span class="visually-hidden">메뉴 열기</span>
+    </button>
+  </div>
+</header>
+
+<div class="menu-backdrop" id="menu-backdrop" hidden></div>
+<nav class="site-menu" id="site-menu" hidden aria-label="전체 메뉴">
+  <p class="site-menu-label">메뉴</p>
+  {
+    links.map((link) => (
+      <a
+        href={link.href}
+        {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {link.label}
+      </a>
+    ))
+  }
+  <p class="site-menu-label">다운로드</p>
+  {
+    downloads.map((item) => (
+      <a
+        href={item.href}
+        target="_blank"
+        rel={item.sponsored ? "sponsored noopener noreferrer" : "noopener noreferrer"}
+      >
+        {item.label}
+      </a>
+    ))
+  }
+  <p class="site-menu-note">쿠팡파트너스의 일환으로 이에 따른 일정액의 수수료를 지급받습니다</p>
+</nav>
+
+<script>
+  const toggle = document.getElementById("menu-toggle");
+  const menu = document.getElementById("site-menu");
+  const backdrop = document.getElementById("menu-backdrop");
+  if (toggle && menu && backdrop) {
+    const label = toggle.querySelector(".visually-hidden");
+
+    function setOpen(open: boolean) {
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.classList.toggle("is-open", open);
+      menu.hidden = !open;
+      backdrop.hidden = !open;
+      document.body.classList.toggle("menu-lock", open);
+      if (label) label.textContent = open ? "메뉴 닫기" : "메뉴 열기";
+    }
+
+    toggle.addEventListener("click", () => {
+      setOpen(toggle.getAttribute("aria-expanded") !== "true");
+    });
+    backdrop.addEventListener("click", () => setOpen(false));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+  }
+</script>

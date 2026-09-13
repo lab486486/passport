@@ -1,0 +1,30 @@
+---
+import { site } from "../site.config";
+import { getSiteSettings } from "../utils/site-settings";
+
+const year = new Date().getFullYear();
+const settings = getSiteSettings();
+const brand = settings.copyright_name || site.name;
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-links">
+      <a href="/countries/">국가별 여권조건</a>
+      <a href="/guide/check-without-passport/">유효기간 확인</a>
+      <a href="/guide/six-months/">6개월 미만일 때</a>
+      <a href="/guide/passport-number/">여권번호 조회</a>
+      <a href="/guide/reissue/">재발급 방법</a>
+      <a href="/guide/fees/">발급 수수료</a>
+      <a href="/guide/lost-passport/">분실신고</a>
+      <a href="/guide/emergency/">긴급여권 발급</a>
+      <a href="/guide/visa-pages/">사증이란?</a>
+      <a class="footer-admin" href="/admin/" aria-label="관리자">·</a>
+    </div>
+    <p class="footer-copy">© {year} {brand}</p>
+    <p class="footer-note">
+      외교부·출입국 공식 기관이 아닙니다. 결과는 공개된 입국 규정을 정리한 참고용이며, 출발 전
+      항공사와 해당국 공관에서 다시 확인하세요. 최종 확인일 기준은 각 국가 카드에 적혀 있습니다.
+    </p>
+  </div>
+</footer>

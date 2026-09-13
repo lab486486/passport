@@ -1,0 +1,11 @@
+name = "passport"
+compatibility_date = "2026-08-15"
+pages_build_output_dir = "dist"
+
+# Existing Cloudflare R2 bucket. Renaming it here would break uploads unless the bucket is renamed in Cloudflare too.
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "yeogwon-media"
+
+[vars]
+R2_PUBLIC_BASE_URL = ""

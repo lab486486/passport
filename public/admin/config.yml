@@ -1,0 +1,104 @@
+backend:
+  name: github
+  repo: lab486486/passport
+  branch: main
+  base_url: https://passport.marrien.co.kr
+  auth_endpoint: api/oauth/auth
+  auth_scope: repo
+
+media_library:
+  name: r2
+  config:
+    upload_url: /api/upload
+    public_base_url: ""
+
+local_backend: false
+media_folder: ""
+public_folder: ""
+
+slug:
+  encoding: unicode
+  clean_accents: true
+
+collections:
+  - name: site
+    label: 사이트 설정
+    files:
+      - name: general
+        label: 사이트 상세
+        file: src/data/site.json
+        format: json
+        fields:
+          - { label: 사이트 제목, name: title, widget: string }
+          - { label: 사이트 설명, name: description, widget: text, required: false }
+          - { label: 키워드, name: keywords, widget: string, required: false }
+          - { label: 사이트 주소, name: site_url, widget: string }
+          - { label: 카피라이트 이름, name: copyright_name, widget: string }
+      - name: google_search_console
+        label: 구글 서치콘솔
+        file: src/data/site/google-search-console.json
+        format: json
+        fields:
+          - { label: 소유권 확인 코드, name: code, widget: text, required: false }
+      - name: naver_search_advisor
+        label: 네이버 서치어드바이저
+        file: src/data/site/naver-search-advisor.json
+        format: json
+        fields:
+          - { label: 소유권 확인 코드, name: code, widget: text, required: false }
+      - name: analytics
+        label: 애널리틱스
+        file: src/data/site/analytics.json
+        format: json
+        fields:
+          - { label: 추적 코드, name: code, widget: text, required: false }
+
+  - name: nav
+    label: 상단메뉴
+    files:
+      - name: main
+        label: 상단메뉴
+        file: src/data/nav.json
+        format: json
+        fields:
+          - label: 상단 메뉴
+            name: nav
+            widget: list
+            fields:
+              - { label: 메뉴 이름, name: label, widget: string }
+              - label: 연결 유형
+                name: type
+                widget: select
+                options:
+                  - { label: 홈, value: home }
+                  - { label: 직접URL, value: url }
+              - { label: URL, name: value, widget: string, required: false }
+
+  - name: adsense
+    label: 애드센스
+    files:
+      - name: enabled
+        label: 광고 켜기
+        file: src/data/adsense/enabled.json
+        format: json
+        fields:
+          - { label: 광고 사용, name: enabled, widget: boolean, default: false }
+      - name: head_script
+        label: 애드센스 코드
+        file: src/data/adsense/head-script.json
+        format: json
+        fields:
+          - { label: 기본 script 코드, name: script, widget: text, required: false }
+      - name: ads_txt
+        label: ads.txt
+        file: src/data/adsense/ads-txt.json
+        format: json
+        fields:
+          - { label: ads.txt 한 줄, name: content, widget: string, required: false }
+      - name: display
+        label: 디스플레이
+        file: src/data/adsense/display.json
+        format: json
+        fields:
+          - { label: 홈 광고 코드, name: code_home, widget: text, required: false }
+          - { label: 본문 광고 코드, name: code, widget: text, required: false }

@@ -1,0 +1,7 @@
+{
+  "nav": [
+    { "label": "재발급 방법", "type": "url", "value": "/guide/reissue/" },
+    { "label": "긴급여권 발급", "type": "url", "value": "/guide/emergency/" },
+    { "label": "국가별 여권조건", "type": "url", "value": "/countries/" }
+  ]
+}

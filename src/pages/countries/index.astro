@@ -1,0 +1,39 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { countries } from "../../data/countries";
+import { needLabel } from "../../lib/passport";
+import CalculatorCta from "../../components/CalculatorCta.astro";
+import PlaceDisplayAd from "../../components/PlaceDisplayAd.astro";
+---
+
+<Layout
+  title="국가별 여권조건"
+  description="일본·베트남·태국 등 주요 여행지 국가별 여권 유효기간. 6개월, 3개월, 체류 기간 기준을 나라별로 확인하세요."
+  ogImage="https://passport.marrien.co.kr/og/default.png?v=4"
+>
+  <Header />
+  <main id="main" class="prose">
+    <div class="container">
+      <h1>국가별 여행 여권 유효기간</h1>
+      <p>체류 가능일과 여권 잔여기간을 나눠 정리했습니다. 숫자는 공식 근거를 기준으로 한 초안입니다.</p>
+      <CalculatorCta />
+      <div class="card country-list">
+        {
+          countries.map((c) => (
+            <a class="country-item" href={`/countries/${c.slug}/`}>
+              <span>
+                <strong>{c.name}</strong>
+                <span class="hint">{needLabel(c)}</span>
+              </span>
+              <span class="hint">{c.confidence === "high" ? "확실" : "확인 필요"}</span>
+            </a>
+          ))
+        }
+      </div>
+      <PlaceDisplayAd />
+    </div>
+  </main>
+  <Footer />
+</Layout>

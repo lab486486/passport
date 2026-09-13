@@ -1,0 +1,372 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import DisplayAd from "../components/DisplayAd.astro";
+import PassportGuide from "../components/PassportGuide.astro";
+import { countries } from "../data/countries";
+import { continentGroups, popularSlugs } from "../data/popular";
+import { hasHomeAd } from "../utils/adsense";
+const popular = popularSlugs
+  .map((slug) => countries.find((item) => item.slug === slug))
+  .filter((item): item is (typeof countries)[number] => Boolean(item));
+const year = new Date().getFullYear();
+const months = Array.from({ length: 12 }, (_, i) => i + 1);
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
+const expiryYears = Array.from({ length: 16 }, (_, i) => year + i);
+const departYears = [year, year + 1];
+const passportMonths = [
+  { value: 1, label: "1월/JAN" },
+  { value: 2, label: "2월/FEB" },
+  { value: 3, label: "3월/MAR" },
+  { value: 4, label: "4월/APR" },
+  { value: 5, label: "5월/MAY" },
+  { value: 6, label: "6월/JUN" },
+  { value: 7, label: "7월/JUL" },
+  { value: 8, label: "8월/AUG" },
+  { value: 9, label: "9월/SEP" },
+  { value: 10, label: "10월/OCT" },
+  { value: 11, label: "11월/NOV" },
+  { value: 12, label: "12월/DEC" },
+];
+---
+
+<Layout>
+  <Header />
+  <main id="main">
+    <section class="hero">
+      <div class="container">
+        <h1>지금 내 여권으로<br />해외여행 갈 수 있나요?</h1>
+        <p>여권 정보면의 기간만료일과 여행 출발일만 입력하세요!</p>
+      </div>
+    </section>
+
+    <section class="container">
+      <form class="check-form" id="check-form">
+        <section class="card form-block">
+          <h2 class="form-block-title">여행 국가</h2>
+          <div class="chips" id="country-chips">
+            {
+              popular.map((c) => (
+                <button type="button" class="chip" data-slug={c.slug}>
+                  {c.name}
+                </button>
+              ))
+            }
+          </div>
+          <label class="other-country">
+            다른 나라
+            <select name="country" id="country-select" required>
+              <option value="">선택</option>
+              {
+                continentGroups.map((group) => (
+                  <optgroup label={group.label}>
+                    {group.slugs
+                      .map((slug) => countries.find((item) => item.slug === slug))
+                      .filter((item): item is (typeof countries)[number] => Boolean(item))
+                      .map((c) => (
+                        <option value={c.slug}>{c.name}</option>
+                      ))}
+                  </optgroup>
+                ))
+              }
+            </select>
+          </label>
+        </section>
+
+        <section class="card form-block" id="step-passport" hidden>
+          <h2 class="form-block-title">여권 만료일 입력</h2>
+          <p class="form-block-help">실제 여권의 빨간 칸을 아래에 입력하세요! (서버에 저장되지 않습니다)</p>
+
+          <PassportGuide />
+
+          <fieldset class="date-set expiry-set">
+            <legend>기간 만료일 (Date of expiry)</legend>
+            <div class="date-row expiry-row">
+              <select name="expiryDay" aria-label="일">
+                <option value="">일</option>
+                {days.map((d) => <option value={d}>{String(d).padStart(2, "0")}</option>)}
+              </select>
+              <select name="expiryMonth" aria-label="월(영어)">
+                <option value="">월</option>
+                {passportMonths.map((m) => <option value={m.value}>{m.label}</option>)}
+              </select>
+              <select name="expiryYear" aria-label="연도">
+                <option value="">연도</option>
+                {expiryYears.map((y) => <option value={y}>{y}</option>)}
+              </select>
+            </div>
+          </fieldset>
+        </section>
+
+        <section class="card form-block" id="step-depart" hidden>
+          <h2 class="form-block-title">여행 출발일</h2>
+          <fieldset class="date-set">
+            <legend class="visually-hidden">여행 출발일</legend>
+            <div class="date-row">
+              <select name="departYear" aria-label="년">
+                {departYears.map((y) => <option value={y} selected={y === year}>{y}</option>)}
+              </select>
+              <select name="departMonth" aria-label="월">
+                <option value="">월</option>
+                {months.map((m) => <option value={m}>{m}</option>)}
+              </select>
+              <select name="departDay" aria-label="일">
+                <option value="">일</option>
+                {days.map((d) => <option value={d}>{d}</option>)}
+              </select>
+            </div>
+          </fieldset>
+
+          <details class="more-stay">
+            <summary>7일보다 길게 머물러요 (귀국일 선택)</summary>
+            <label>
+              귀국일
+              <input type="date" name="returnDate" />
+            </label>
+          </details>
+
+          <button class="btn btn-primary" type="submit">여행 가능 여부 보기</button>
+        </section>
+      </form>
+
+      <div class="card result" id="result" hidden></div>
+      {hasHomeAd() && <DisplayAd id="result-ad" hidden />}
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  import { countries } from "../data/countries";
+  import { storiesFor } from "../data/stories";
+  import { checkPassport, parseISODate } from "../lib/passport";
+
+  const form = document.getElementById("check-form") as HTMLFormElement | null;
+  const result = document.getElementById("result");
+  const select = document.getElementById("country-select") as HTMLSelectElement | null;
+  const stepPassport = document.getElementById("step-passport");
+  const stepDepart = document.getElementById("step-depart");
+  if (!form || !result || !select || !stepPassport || !stepDepart) throw new Error("calculator missing");
+
+  const expiryDay = form.elements.namedItem("expiryDay") as HTMLSelectElement;
+  const expiryMonth = form.elements.namedItem("expiryMonth") as HTMLSelectElement;
+  const expiryYear = form.elements.namedItem("expiryYear") as HTMLSelectElement;
+  const departYear = form.elements.namedItem("departYear") as HTMLSelectElement;
+  const departMonth = form.elements.namedItem("departMonth") as HTMLSelectElement;
+  const departDay = form.elements.namedItem("departDay") as HTMLSelectElement;
+  const returnDateInput = form.elements.namedItem("returnDate") as HTMLInputElement;
+
+  function pad(value: string | number): string {
+    return String(value).padStart(2, "0");
+  }
+
+  function todayParts() {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+  }
+
+  function daysInMonth(year: number, month: number) {
+    return new Date(year, month, 0).getDate();
+  }
+
+  function syncExpiryLimits() {
+    const minYear = todayParts().year;
+    for (const option of expiryYear.options) {
+      if (!option.value) continue;
+      option.disabled = Number(option.value) < minYear;
+    }
+    if (expiryYear.value && expiryYear.selectedOptions[0]?.disabled) {
+      expiryYear.value = "";
+    }
+  }
+
+  function syncDepartLimits() {
+    const today = todayParts();
+    const selectedYear = Number(departYear.value) || today.year;
+
+    for (const option of departYear.options) {
+      if (!option.value) continue;
+      option.disabled = Number(option.value) < today.year;
+    }
+    if (departYear.value && departYear.selectedOptions[0]?.disabled) {
+      const current = [...departYear.options].find((option) => option.value === String(today.year) && !option.disabled);
+      departYear.value = current?.value || "";
+    }
+
+    for (const option of departMonth.options) {
+      if (!option.value) continue;
+      option.disabled = selectedYear === today.year && Number(option.value) < today.month;
+    }
+    if (departMonth.value && departMonth.selectedOptions[0]?.disabled) {
+      departMonth.value = "";
+    }
+
+    const selectedMonth = Number(departMonth.value);
+    const maxDay = selectedMonth ? daysInMonth(selectedYear, selectedMonth) : 31;
+    const minDay = selectedYear === today.year && selectedMonth === today.month ? today.day : 1;
+
+    for (const option of departDay.options) {
+      if (!option.value) continue;
+      const day = Number(option.value);
+      option.disabled = day < minDay || day > maxDay;
+    }
+    if (departDay.value && departDay.selectedOptions[0]?.disabled) {
+      departDay.value = "";
+    }
+
+    const minReturn =
+      departYear.value && departMonth.value && departDay.value
+        ? `${departYear.value}-${pad(departMonth.value)}-${pad(departDay.value)}`
+        : `${today.year}-${pad(today.month)}-${pad(today.day)}`;
+    returnDateInput.min = minReturn;
+    if (returnDateInput.value && returnDateInput.value < minReturn) {
+      returnDateInput.value = "";
+    }
+  }
+
+  function isoFromParts(year: FormDataEntryValue | null, month: FormDataEntryValue | null, day: FormDataEntryValue | null) {
+    if (!year || !month || !day) return null;
+    return parseISODate(`${year}-${pad(String(month))}-${pad(String(day))}`);
+  }
+
+  function setStep(step: HTMLElement, open: boolean, requireNames: string[]) {
+    const wasHidden = step.hidden;
+    step.hidden = !open;
+    for (const name of requireNames) {
+      const field = form.elements.namedItem(name);
+      if (field instanceof HTMLSelectElement || field instanceof HTMLInputElement) {
+        field.required = open;
+      }
+    }
+    if (open && wasHidden) {
+      if (step === stepPassport) syncExpiryLimits();
+      if (step === stepDepart) syncDepartLimits();
+      step.classList.remove("is-in");
+      void step.offsetWidth;
+      step.classList.add("is-in");
+      step.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function syncSteps() {
+    const hasCountry = Boolean(select.value);
+    const hasExpiry = Boolean(expiryDay.value && expiryMonth.value && expiryYear.value);
+    setStep(stepPassport, hasCountry, ["expiryDay", "expiryMonth", "expiryYear"]);
+    setStep(stepDepart, hasCountry && hasExpiry, ["departYear", "departMonth", "departDay"]);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const slug = chip.dataset.slug || "";
+      select.value = slug;
+      document.querySelectorAll(".chip").forEach((item) => item.classList.remove("is-on"));
+      chip.classList.add("is-on");
+      syncSteps();
+    });
+  });
+
+  select.addEventListener("change", () => {
+    document.querySelectorAll(".chip").forEach((item) => {
+      item.classList.toggle("is-on", item.getAttribute("data-slug") === select.value);
+    });
+    syncSteps();
+  });
+
+  [expiryDay, expiryMonth, expiryYear].forEach((field) => {
+    field.addEventListener("change", syncSteps);
+  });
+  expiryYear.addEventListener("change", syncExpiryLimits);
+  syncExpiryLimits();
+
+  [departYear, departMonth, departDay].forEach((field) => {
+    field.addEventListener("change", syncDepartLimits);
+  });
+  syncDepartLimits();
+
+  const preset = new URLSearchParams(location.search).get("country");
+  if (preset && [...select.options].some((option) => option.value === preset)) {
+    select.value = preset;
+    document.querySelectorAll(".chip").forEach((item) => {
+      item.classList.toggle("is-on", item.getAttribute("data-slug") === preset);
+    });
+    syncSteps();
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const slug = String(data.get("country") || "");
+    const country = countries.find((item) => item.slug === slug);
+    const expiry = isoFromParts(data.get("expiryYear"), data.get("expiryMonth"), data.get("expiryDay"));
+    const departure = isoFromParts(data.get("departYear"), data.get("departMonth"), data.get("departDay"));
+    const returnRaw = String(data.get("returnDate") || "");
+    const returnDate = returnRaw ? parseISODate(returnRaw) : undefined;
+
+    if (!country || !expiry || !departure) return;
+
+    const today = todayParts();
+    const minExpiry = parseISODate(`${today.year}-01-01`);
+    if (minExpiry && expiry < minExpiry) {
+      syncExpiryLimits();
+      return;
+    }
+    const startOfToday = parseISODate(`${today.year}-${pad(today.month)}-${pad(today.day)}`);
+    if (startOfToday && departure < startOfToday) {
+      syncDepartLimits();
+      return;
+    }
+
+    const check = checkPassport({ country, passportExpiry: expiry, departure, returnDate });
+    const tone = check.status === "ok" ? "ok" : check.cta === "emergency" ? "no" : "risk";
+    const storyLinks = storiesFor(country.slug)
+      .slice(0, 4)
+      .map((item) => `<a class="story-link" href="${item.href}">${item.hookHtml}</a>`)
+      .join("");
+
+    const buttons =
+      check.cta === "none"
+        ? `<a class="btn btn-ghost" href="/countries/${country.slug}/">${country.name} 여권 유효기간 자세히</a>`
+        : `<a class="btn btn-emergency" href="/guide/emergency/">긴급 여권 만드는 방법</a><a class="btn btn-renew" href="/guide/reissue/">여권 갱신하는 방법</a>`;
+
+    const flag = `https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`;
+
+    result.hidden = false;
+    result.classList.add("is-on");
+    const resultAd = document.getElementById("result-ad");
+    if (resultAd && result.contains(resultAd)) {
+      result.after(resultAd);
+      resultAd.hidden = true;
+    }
+    result.innerHTML = `
+      <p class="result-kicker ${tone}">
+        <img class="result-flag" src="${flag}" width="20" height="14" alt="" />
+        ${country.name}
+      </p>
+      <h2 class="result-title ${tone}"><span class="${check.status === "ok" ? "is-blink" : "is-mark"}">${check.headline}</span></h2>
+      <p class="result-summary">${check.summary}</p>
+      <div class="metrics">
+        <div class="metric"><span>여행 출발까지 남은 시간</span><b class="${check.daysUntilTrip < 0 ? "metric-neg" : ""}">${check.daysUntilTrip}일</b></div>
+        <div class="metric"><span>여행일 기준 여권만료일</span><b class="${check.remainingDays < 0 ? "metric-neg" : ""}">${check.remainingDays}일</b></div>
+      </div>
+      <div class="result-notes">
+        <p>${check.requirement} 여권 유효기간을 충족하지 못하면 항공사 탑승 단계에서부터 제지받을 수 있습니다.</p>
+      </div>
+      <div class="actions${check.cta === "none" ? "" : " actions-2"}">${buttons}</div>
+      <div id="result-ad-mount"></div>
+      <h3>항공기 탑승 및 입국 금지 사례 모음</h3>
+      <div class="story-list">${storyLinks}</div>
+      <p class="story-source">위 내용은 최근 뉴스 기사를 바탕으로 작성되었습니다</p>
+    `;
+    const mount = document.getElementById("result-ad-mount");
+    if (resultAd && mount) {
+      mount.replaceWith(resultAd);
+      resultAd.hidden = false;
+      if (resultAd.dataset.filled !== "1") {
+        resultAd.dataset.filled = "1";
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      }
+    }
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+</script>

@@ -1,0 +1,14 @@
+---
+interface Props {
+  country?: string;
+  slug?: string;
+}
+
+const { slug } = Astro.props;
+const href = slug ? `/?country=${slug}` : "/";
+---
+
+<aside class="calc-cta">
+  <blockquote class="calc-cta-quote">실제 여권 만료일만 입력하면 유효기간을 확인할 수 있어요!</blockquote>
+  <a class="btn calc-cta-btn" href={href}>여권 유효기간 계산기</a>
+</aside>

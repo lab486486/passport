@@ -1,0 +1,8 @@
+---
+import { hasHeadScript, getAdsenseConfig } from "../utils/adsense";
+
+const config = getAdsenseConfig();
+const raw = hasHeadScript(config) ? config.head_script.trim() : "";
+---
+
+{raw && <Fragment set:html={raw} />}

@@ -1,0 +1,25 @@
+---
+import { hasDisplayAd } from "../utils/adsense";
+
+interface Props {
+  id?: string;
+  hidden?: boolean;
+}
+
+const { id, hidden = false } = Astro.props;
+---
+
+{
+  hasDisplayAd() && (
+    <div class="ad-slot" id={id} data-display-ad hidden={hidden || undefined}>
+      <ins
+        class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-8094444885520451"
+        data-ad-slot="7761523567"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  )
+}

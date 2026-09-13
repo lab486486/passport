@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>국가별 여권 유효기간 CMS</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link href="/admin/config.yml" type="text/yaml" rel="cms-config-url" />
+    <script>
+      window.CMS_MANUAL_INIT = true;
+    </script>
+  </head>
+  <body>
+    <script src="https://unpkg.com/decap-cms@3.4.0/dist/decap-cms.js"></script>
+    <script src="/admin/r2-media-library.js"></script>
+    <script>
+      CMS.registerMediaLibrary(window.R2MediaLibrary);
+      CMS.init();
+    </script>
+  </body>
+</html>
