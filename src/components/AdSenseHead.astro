@@ -1,8 +1,12 @@
 ---
-import { hasHeadScript, getAdsenseConfig } from "../utils/adsense";
-
-const config = getAdsenseConfig();
-const raw = hasHeadScript(config) ? config.head_script.trim() : "";
+import { hasHeadScript } from "../utils/adsense";
 ---
 
-{raw && <Fragment set:html={raw} />}
+{
+  hasHeadScript() && (
+    <script>
+      import { bootAdsense } from "../scripts/adsense-guard";
+      bootAdsense();
+    </script>
+  )
+}

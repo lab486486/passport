@@ -3,38 +3,39 @@ import DisplayAd from "./DisplayAd.astro";
 import { hasDisplayAd } from "../utils/adsense";
 ---
 
-{
-  hasDisplayAd() && (
-    <>
-      <DisplayAd />
-      <script is:inline>
-        (function () {
-          var ad = document.querySelector("[data-display-ad]:not([data-ad-placed])");
-          if (!ad) return;
-          ad.setAttribute("data-ad-placed", "1");
-          var main = ad.closest("main.prose");
-          var box = main && main.querySelector(".container");
-          if (box && box.contains(ad)) {
-            var cta = box.querySelector(".calc-cta");
-            var h2 = box.querySelector("h2");
-            if (cta) {
-              cta.after(ad);
-            } else if (h2) {
-              h2.before(ad);
-            } else {
-              var h1 = box.querySelector("h1");
-              var node = h1 ? h1.nextElementSibling : null;
-              var last = null;
-              while (node && node.tagName === "P") {
-                last = node;
-                node = node.nextElementSibling;
-              }
-              if (last) last.after(ad);
-            }
+{hasDisplayAd() && <DisplayAd />}
+
+<script>
+  import { fillPendingAdSlots, isAdsenseBlocked, pushAdsense } from "../scripts/adsense-guard";
+
+  if (isAdsenseBlocked()) {
+    document.querySelectorAll("[data-display-ad]").forEach((el) => el.remove());
+  } else {
+    fillPendingAdSlots();
+    const ad = document.querySelector("[data-display-ad]:not([data-ad-placed])");
+    if (ad) {
+      ad.setAttribute("data-ad-placed", "1");
+      const main = ad.closest("main.prose");
+      const box = main && main.querySelector(".container");
+      if (box && box.contains(ad)) {
+        const cta = box.querySelector(".calc-cta");
+        const h2 = box.querySelector("h2");
+        if (cta) {
+          cta.after(ad);
+        } else if (h2) {
+          h2.before(ad);
+        } else {
+          const h1 = box.querySelector("h1");
+          let node = h1 ? h1.nextElementSibling : null;
+          let last: Element | null = null;
+          while (node && node.tagName === "P") {
+            last = node;
+            node = node.nextElementSibling;
           }
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
-        })();
-      </script>
-    </>
-  )
-}
+          if (last) last.after(ad);
+        }
+      }
+      pushAdsense();
+    }
+  }
+</script>
