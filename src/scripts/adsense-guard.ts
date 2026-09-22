@@ -15,7 +15,15 @@ type GuardState = {
 };
 
 let booted = false;
+let blocked = false;
 let lastRecordAt = 0;
+let injectionObserver: MutationObserver | null = null;
+
+const noopAdsbygoogle = {
+  push() {
+    return 0;
+  },
+};
 
 function now(): number {
   return Date.now();
@@ -57,14 +65,116 @@ function writeState(state: GuardState): void {
 }
 
 export function isAdsenseBlocked(): boolean {
-  return readState().count >= MAX_CLICKS;
+  return blocked || readState().count >= MAX_CLICKS;
 }
 
 export function recordAdClickEstimate(): void {
+  if (isAdsenseBlocked()) {
+    enforceAdsenseBlock();
+    return;
+  }
+
   const state = readState();
   if (state.windowStart === 0) state.windowStart = now();
   state.count += 1;
   writeState(state);
+
+  if (state.count >= MAX_CLICKS) {
+    enforceAdsenseBlock();
+  }
+}
+
+function neutralizeAdsbygoogle(): void {
+  try {
+    Object.defineProperty(window, "adsbygoogle", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return noopAdsbygoogle;
+      },
+      set() {
+        // Google's loader does `window.adsbygoogle = window.adsbygoogle || []`.
+      },
+    });
+  } catch {
+    window.adsbygoogle = noopAdsbygoogle;
+  }
+}
+
+function isAdsenseNode(node: Node): boolean {
+  if (!(node instanceof Element)) return false;
+  if (node.matches("ins.adsbygoogle, [data-display-ad]")) return true;
+  if (node instanceof HTMLScriptElement) {
+    const src = node.src || "";
+    return src.includes("googlesyndication.com") || src.includes("adsbygoogle");
+  }
+  if (node instanceof HTMLIFrameElement) {
+    const id = node.id || "";
+    const name = node.name || "";
+    const src = node.src || "";
+    return (
+      id.startsWith("aswift_") ||
+      id.startsWith("google_ads_iframe") ||
+      name.startsWith("google_ads") ||
+      src.includes("googlesyndication.com") ||
+      src.includes("doubleclick.net")
+    );
+  }
+  return false;
+}
+
+function removeAdSlots(): void {
+  document
+    .querySelectorAll(
+      [
+        "[data-display-ad]",
+        "ins.adsbygoogle",
+        'iframe[id^="aswift_"]',
+        'iframe[id^="google_ads_iframe"]',
+        'iframe[name^="google_ads"]',
+        'iframe[src*="googlesyndication.com"]',
+        'iframe[src*="doubleclick.net"]',
+        'script[src*="pagead2.googlesyndication.com"]',
+        'script[src*="adsbygoogle"]',
+      ].join(","),
+    )
+    .forEach((el) => el.remove());
+}
+
+function watchLateInjections(): void {
+  if (injectionObserver || typeof MutationObserver === "undefined") return;
+  injectionObserver = new MutationObserver((mutations) => {
+    if (!blocked) return;
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (isAdsenseNode(node)) {
+          node.parentNode?.removeChild(node);
+          continue;
+        }
+        if (node instanceof Element) {
+          node
+            .querySelectorAll(
+              [
+                "[data-display-ad]",
+                "ins.adsbygoogle",
+                'iframe[id^="aswift_"]',
+                'iframe[id^="google_ads_iframe"]',
+                'script[src*="pagead2.googlesyndication.com"]',
+              ].join(","),
+            )
+            .forEach((el) => el.remove());
+        }
+      }
+    }
+  });
+  injectionObserver.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+function enforceAdsenseBlock(): void {
+  blocked = true;
+  neutralizeAdsbygoogle();
+  removeAdSlots();
+  watchLateInjections();
 }
 
 function loadAdsenseScript(): void {
@@ -84,14 +194,10 @@ export function pushAdsense(): void {
   (window.adsbygoogle = window.adsbygoogle || []).push({});
 }
 
-function removeAdSlots(): void {
-  document.querySelectorAll("[data-display-ad]").forEach((el) => el.remove());
-}
-
 export function fillPendingAdSlots(): void {
   bootAdsense();
   if (isAdsenseBlocked()) {
-    removeAdSlots();
+    enforceAdsenseBlock();
     return;
   }
 
@@ -114,8 +220,14 @@ export function fillPendingAdSlots(): void {
   });
 }
 
+function isAdsenseFrame(el: Element): boolean {
+  if (!(el instanceof HTMLIFrameElement)) return false;
+  return isAdsenseNode(el);
+}
+
 function isAdArea(target: EventTarget | null): boolean {
-  return target instanceof Element && Boolean(target.closest(".adsbygoogle"));
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("[data-display-ad], ins.adsbygoogle, .adsbygoogle")) || isAdsenseFrame(target);
 }
 
 function watchAdClicks(): void {
@@ -134,8 +246,27 @@ function watchAdClicks(): void {
     }, ARM_HOLD_MS);
   };
 
+  const recordIfArmed = () => {
+    if (!armed || isAdsenseBlocked()) {
+      if (isAdsenseBlocked()) enforceAdsenseBlock();
+      return;
+    }
+    const t = now();
+    if (t - lastRecordAt < BLUR_DEBOUNCE_MS) return;
+    lastRecordAt = t;
+    armed = false;
+    recordAdClickEstimate();
+  };
+
   document.addEventListener(
     "pointerenter",
+    (event) => {
+      if (isAdArea(event.target)) arm();
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerdown",
     (event) => {
       if (isAdArea(event.target)) arm();
     },
@@ -156,19 +287,19 @@ function watchAdClicks(): void {
     { capture: true, passive: true },
   );
 
-  window.addEventListener("blur", () => {
-    if (!armed) return;
-    const t = now();
-    if (t - lastRecordAt < BLUR_DEBOUNCE_MS) return;
-    lastRecordAt = t;
-    armed = false;
-    recordAdClickEstimate();
+  window.addEventListener("blur", recordIfArmed);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") recordIfArmed();
   });
 }
 
 export function bootAdsense(): void {
   if (booted) return;
   booted = true;
-  if (!isAdsenseBlocked()) loadAdsenseScript();
+  if (isAdsenseBlocked()) {
+    enforceAdsenseBlock();
+    return;
+  }
+  loadAdsenseScript();
   watchAdClicks();
 }
