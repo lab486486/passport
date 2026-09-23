@@ -1,12 +1,11 @@
 ---
-import { hasHeadScript } from "../utils/adsense";
+import { getAdsenseConfig, hasHeadScript } from "../utils/adsense";
+
+const adScriptSrc = getAdsenseConfig().head_script.match(/src="([^"]+)"/)?.[1] ?? "";
 ---
 
 {
-  hasHeadScript() && (
-    <script>
-      import { bootAdsense } from "../scripts/adsense-guard";
-      bootAdsense();
-    </script>
+  hasHeadScript() && adScriptSrc && (
+    <script is:inline src="/js/adsense-guard.js" data-ad-script-src={adScriptSrc}></script>
   )
 }

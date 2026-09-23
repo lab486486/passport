@@ -12,7 +12,7 @@ const { id, hidden = false } = Astro.props;
 {
   hasDisplayAd() && (
     <div
-      class="ad-slot"
+      class="ad-slot ad-unit"
       id={id}
       data-display-ad
       data-ad-client="ca-pub-8094444885520451"
@@ -23,8 +23,3 @@ const { id, hidden = false } = Astro.props;
     />
   )
 }
-
-<script>
-  import { fillPendingAdSlots } from "../scripts/adsense-guard";
-  fillPendingAdSlots();
-</script>

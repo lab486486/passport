@@ -141,7 +141,6 @@ const passportMonths = [
   import { countries } from "../data/countries";
   import { storiesFor } from "../data/stories";
   import { checkPassport, parseISODate } from "../lib/passport";
-  import { fillPendingAdSlots, isAdsenseBlocked, pushAdsense } from "../scripts/adsense-guard";
 
   const form = document.getElementById("check-form") as HTMLFormElement | null;
   const result = document.getElementById("result");
@@ -360,16 +359,17 @@ const passportMonths = [
       <p class="story-source">위 내용은 최근 뉴스 기사를 바탕으로 작성되었습니다</p>
     `;
     const mount = document.getElementById("result-ad-mount");
-    if (isAdsenseBlocked()) {
+    const adsense = window.PassportAdsense;
+    if (!adsense || adsense.isBlocked()) {
       resultAd?.remove();
       mount?.remove();
     } else if (resultAd && mount) {
-      fillPendingAdSlots();
-      mount.replaceWith(resultAd);
       resultAd.hidden = false;
+      mount.replaceWith(resultAd);
+      adsense.fillPendingAdSlots();
       if (resultAd.dataset.filled !== "1") {
         resultAd.dataset.filled = "1";
-        pushAdsense();
+        adsense.push();
       }
     }
     result.scrollIntoView({ behavior: "smooth", block: "start" });

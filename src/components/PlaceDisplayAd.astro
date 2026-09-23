@@ -6,12 +6,10 @@ import { hasDisplayAd } from "../utils/adsense";
 {hasDisplayAd() && <DisplayAd />}
 
 <script>
-  import { fillPendingAdSlots, isAdsenseBlocked, pushAdsense } from "../scripts/adsense-guard";
-
-  if (isAdsenseBlocked()) {
-    document.querySelectorAll("[data-display-ad]").forEach((el) => el.remove());
-  } else {
-    fillPendingAdSlots();
+  const guard = window.PassportAdsense;
+  if (guard?.isBlocked()) {
+    document.querySelectorAll("[data-display-ad], .ad-unit").forEach((el) => el.remove());
+  } else if (guard) {
     const ad = document.querySelector("[data-display-ad]:not([data-ad-placed])");
     if (ad) {
       ad.setAttribute("data-ad-placed", "1");
@@ -35,7 +33,8 @@ import { hasDisplayAd } from "../utils/adsense";
           if (last) last.after(ad);
         }
       }
-      pushAdsense();
+      guard.fillPendingAdSlots();
+      guard.push();
     }
   }
 </script>
