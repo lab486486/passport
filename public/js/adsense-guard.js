@@ -1,5 +1,5 @@
 (function () {
-  var KEY = "passport:adsense-ivt";
+  var KEY = "passport:adsense-ivt-v2";
   var WINDOW_MS = 24 * 60 * 60 * 1000;
   var MAX_CLICKS = 3;
   var BLUR_DEBOUNCE_MS = 1000;
@@ -36,6 +36,7 @@
   var injectionObserver = null;
   var lastRecordAt = 0;
   var armedUntil = 0;
+  var siteNavAt = 0;
   var nativeAppendChild = Node.prototype.appendChild;
   var nativeInsertBefore = Node.prototype.insertBefore;
 
@@ -100,6 +101,29 @@
 
   function isArmed() {
     return now() < armedUntil;
+  }
+
+  function isSiteArticleLink(target) {
+    if (!(target instanceof Element)) return false;
+    var link = target.closest("a[href]");
+    if (!link || isAdArea(link)) return false;
+    var href = link.getAttribute("href") || "";
+    if (!href || href.charAt(0) === "#") return false;
+    try {
+      var url = new URL(link.href, location.href);
+      if (url.origin !== location.origin) return false;
+      return url.pathname !== location.pathname || url.search !== location.search;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function markSiteNavigation() {
+    siteNavAt = now();
+  }
+
+  function isSiteNavigation() {
+    return siteNavAt > 0 && now() - siteNavAt < 3000;
   }
 
   function neutralizeAdsbygoogle() {
@@ -212,6 +236,7 @@
   }
 
   function recordIfArmed() {
+    if (isSiteNavigation()) return;
     if (isAdArea(document.activeElement)) arm();
     if (!isArmed()) return;
     if (isBlocked()) {
@@ -248,13 +273,41 @@
     document.addEventListener(
       "pointerdown",
       function (event) {
+        if (isSiteArticleLink(event.target)) {
+          markSiteNavigation();
+          return;
+        }
         if (isAdArea(event.target)) arm();
+      },
+      true,
+    );
+    document.addEventListener(
+      "click",
+      function (event) {
+        if (!isSiteArticleLink(event.target)) return;
+        if (event.defaultPrevented) {
+          siteNavAt = 0;
+          return;
+        }
+        markSiteNavigation();
+      },
+      true,
+    );
+    document.addEventListener(
+      "keydown",
+      function (event) {
+        if (event.key !== "Enter") return;
+        if (isSiteArticleLink(event.target)) markSiteNavigation();
       },
       true,
     );
     document.addEventListener(
       "touchstart",
       function (event) {
+        if (isSiteArticleLink(event.target)) {
+          markSiteNavigation();
+          return;
+        }
         if (isAdArea(event.target)) arm();
       },
       { capture: true, passive: true },
@@ -273,6 +326,19 @@
       },
       true,
     );
+
+    if (window.navigation && typeof window.navigation.addEventListener === "function") {
+      window.navigation.addEventListener("navigate", function (event) {
+        try {
+          var url = new URL(event.destination.url);
+          if (url.origin !== location.origin) return;
+          if (url.pathname === location.pathname && url.search === location.search) return;
+          markSiteNavigation();
+        } catch (err) {
+          // ignore malformed destinations
+        }
+      });
+    }
 
     window.addEventListener("blur", recordIfArmed);
     window.addEventListener("pagehide", recordIfArmed);
